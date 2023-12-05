@@ -13,11 +13,7 @@ app.app_context().push()
 
 @app.route('/')
 def index():
-    user_cookie = request.cookies.get('user_auth')
-    if user_cookie:
-        user = User.query.filter_by(id = user_cookie).first()
-        if user:
-            return render_template('index_logged.html', user = user)
+    
     return render_template('index.html')
 
 class User(db.Model):
@@ -55,16 +51,28 @@ def login():
         
         if user:
             user_cookie = str(user.id)
-            response = make_response(redirect(url_for('index')))
+            response = make_response(redirect(url_for('index_logged')))
             response.set_cookie('user_auth', user_cookie)
             response.status_code = 200
 
             return response
+        
         else:
-            abort(401)
+            response = make_response(redirect(url_for('index_logged')))
+            response.status_code = 401
+            return response
                 
     return render_template('login.html')
 
+@app.route('/index_logged/', methods=['GET'])
+def index_logged():
+    user_cookie = request.cookies.get('user_auth')
+    if user_cookie:
+        user = User.query.filter_by(id = user_cookie).first()
+        if user:
+            return render_template('index_logged.html', user = user)
+
+    abort(401)
 
 @app.route('/logout/', methods=['POST', 'GET'])
 def logout():
