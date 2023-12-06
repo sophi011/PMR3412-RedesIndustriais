@@ -41,7 +41,8 @@ class Session(db.Model):
 def hash_password(password, password_salt):
     salt = password_salt
     kdf = Scrypt(salt=salt, length=32, n=2**14, r=8, p=1, backend=default_backend())
-    key = base64.urlsafe_b64encode(kdf.derive(password.encode('utf-8')))
+    digest = kdf.derive(password.encode('utf-8'))
+    key = base64.urlsafe_b64encode(digest)
     return key.decode('utf-8')
 
 @app.route('/signup/', methods=['POST', 'GET'])
@@ -88,7 +89,7 @@ def login():
             print("Fail!")
             response = make_response(redirect(url_for('index_logged')))
             response.status_code = 401
-            return response
+            abort(401)
         
         else:
             response = make_response(redirect(url_for('index_logged')))
@@ -104,9 +105,9 @@ def index_logged():
         session = Session.query.filter_by(id = session_cookie).first()
         if session:
             user = User.query.filter_by(id=session.user_id).first()
-    return render_template('index_logged.html', user = user)
+            return render_template('index_logged.html', user = user)
 
-    #abort(401)
+    abort(401)
 
 @app.route('/logout/', methods=['POST', 'GET'])
 def logout():
