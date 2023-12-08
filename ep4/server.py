@@ -4,9 +4,11 @@ import os
 from cryptography.hazmat.primitives.kdf.scrypt import Scrypt
 from cryptography.hazmat.backends import default_backend
 import base64
-from base64 import b64encode, b64decode
-from cryptography.exceptions import InvalidKey
 import hashlib
+from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
+from cryptography.hazmat.backends import default_backend
+from cryptography.hazmat.primitives import hashes
+import hmac
 
 app = Flask(__name__)
 basedir = os.path.abspath(os.path.dirname(__file__))
@@ -66,11 +68,42 @@ def signup():
         return response
     return render_template('signup.html')
 
+def decrypt(aes, iv, text):
+    aes_context = Cipher(algorithms.AES(aes), modes.CTR(iv), backend=default_backend())
+    decryptor = aes_context.decryptor()
+    decrypted_text = decryptor.update(text) + decryptor.finalize()
+    return decrypted_text
+
+def validate_hmac(mac, data, hmac_data):
+    hash = hashes.Hash(hashes.SHA256(), backend=default_backend())
+    hash.update(mac+data)
+    hmac_calc = hash.finalize()
+    validation = hmac.compare_digest(hmac_calc, hmac_data)
+    return validation
+
 @app.route('/login/', methods=['POST', 'GET'])
 def login():
     if request.method == 'POST':
-        email = request.form.get('email')
-        password = request.form.get('password')
+        session_keys = request.form.get('session_keys')
+        print("session_keys: ", session_keys)
+        session_keys = base64.b64decode(session_keys)
+        aes = session_keys[:32]
+        mac = session_keys[32:64]
+        iv = session_keys[64:]
+        cyphertext = request.form.get('cyphertext')
+        print("cyphertext: ", cyphertext)
+        cyphertext = base64.b64decode(cyphertext)
+        hmac_data = request.form.get('hmac')
+        print("hmac: ", hmac)
+        hmac_data = base64.b64decode(hmac_data)
+        
+        
+        mac_validation = validate_hmac(mac, cyphertext, hmac_data)
+        if not mac_validation:
+            abort(401)
+
+        decrypted_data = decrypt(aes, iv, cyphertext).decode()
+        email, password = decrypted_data.split(":")
         user = User.query.filter_by(email=email).first()
         
         if user:
