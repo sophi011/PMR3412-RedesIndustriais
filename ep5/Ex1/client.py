@@ -1,32 +1,49 @@
-# O cliente fará o papel de interface homem-máquina (IHM)
+"""
+O cliente fará o papel de interface homem-máquina (IHM)]
+cliente.write_register(endereco,valoralvo)
+escrita nos endereços da tabela das Bobinas com o método write_coil()
+limite de 248 bytes por solicitação
+requisicao = cliente.write_coils(endereco,[0]*quantidade)
+codigo = requisicao.exception_code
+ModbusExceptions.decode(codigo)
+somente as tabelas Bobinas e Registros de Retenção são permitidas as funções de escrita
+"""
+
 # client.py
 
 from pymodbus.client.sync import ModbusTcpClient
+from pymodbus.pdu import ModbusExceptions
 
 PORT1 = 5020
-PORT2 = 5021
-SLAVE_ADDRESSES = [0, 0]
-SERVER_ADDRESSES = [("localhost", PORT1), ("localhost", PORT2)]
+SLAVE_ADDRESS = 0  # endereço
+NUM_VAR = 2   # quantidade de variáveis
+VALUE = [1, 1]  # valor a ser solicitado para escrita
+SERVER_ADDRESS = ("localhost", PORT1)
 
-print("Endereços das solicitações de leitura: ", SLAVE_ADDRESSES)
-
-# Server 1
-client = ModbusTcpClient(SERVER_ADDRESSES[0][0], SERVER_ADDRESSES[0][1])
+client = ModbusTcpClient(SERVER_ADDRESS[0], SERVER_ADDRESS[1])
 client.connect()
-disc_inputs1 = client.read_discrete_inputs(SLAVE_ADDRESSES[0])
-input_regs1 = client.read_input_registers(SLAVE_ADDRESSES[0])
-print("Dados das entradas discretas do server com endereço " + str(SERVER_ADDRESSES[0][1]) + ": ", disc_inputs1)
-print("Dados dos registros de entradado server com endereço " + str(SERVER_ADDRESSES[0][1]) + ": ", input_regs1)
-client.close()
 
-# Server 2
-client2 = ModbusTcpClient(SERVER_ADDRESSES[1][0], SERVER_ADDRESSES[1][1])
-client2.connect()
-disc_inputs2 = client2.read_discrete_inputs(SLAVE_ADDRESSES[1])
-input_regs2 = client2.read_input_registers(SLAVE_ADDRESSES[1])
-print("Dados das entradas discretas do server com endereço " + str(SERVER_ADDRESSES[1][1]) + ": ", disc_inputs2)
-print("Dados dos registros de entradado server com endereço " + str(SERVER_ADDRESSES[1][1]) + ": ", input_regs2)
+# Escritas inválidas
+invalid_address = 5
+invalid_value = ""
+request1 = client.write_coils(invalid_address,[0]*NUM_VAR)
+code1 = request1.exception_code
+print("Parâmetro inválido para escrita solicitado (endereço): ", invalid_address)
+print("Código de exceção: ", code1)
+print("Código de exceção decodificado: ", ModbusExceptions.decode(code1))
 
-print("Endereços dos servidores: ", SERVER_ADDRESSES)
+request2 = client.write_coils(SLAVE_ADDRESS, invalid_value)
+code2 = request2.exception_code
+print("Parâmetro inválido para escrita solicitado (valor): ", invalid_value)
+print("Código de exceção: ", code2)
+print("Código de exceção decodificado: ", ModbusExceptions.decode(code2))
 
+# Solicitação válida de escrita
+valid_request = client.write_coils(SLAVE_ADDRESS,[VALUE]*NUM_VAR)
+print("Parâmetro válido para escrita: ", VALUE)
+print("Endereço válido das solicitações de leitura e escrita: ", SLAVE_ADDRESS)
+print("Parâmetro de quantidade na solicitação válida de escrita: ", NUM_VAR)
 
+# Solicitação de leitura
+read_value = client.read_coils(SLAVE_ADDRESS, NUM_VAR)
+print("Valor lido: " + str(read_value.bits))
