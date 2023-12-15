@@ -7,6 +7,7 @@ requisicao = cliente.write_coils(endereco,[0]*quantidade)
 codigo = requisicao.exception_code
 ModbusExceptions.decode(codigo)
 somente as tabelas Bobinas e Registros de Retenção são permitidas as funções de escrita
+read_discrete_inputs(0, unit=0x00)
 """
 
 # client.py
@@ -15,35 +16,16 @@ from pymodbus.client.sync import ModbusTcpClient
 from pymodbus.pdu import ModbusExceptions
 
 PORT1 = 5020
-SLAVE_ADDRESS = 0  # endereço
-NUM_VAR = 2   # quantidade de variáveis
-VALUE = [1, 1]  # valor a ser solicitado para escrita
+SLAVE_ADDRESSES = [0, 0]  # endereço para leitura
 SERVER_ADDRESS = ("localhost", PORT1)
 
 client = ModbusTcpClient(SERVER_ADDRESS[0], SERVER_ADDRESS[1])
 client.connect()
 
-# Escritas inválidas
-invalid_address = 5
-invalid_value = ""
-request1 = client.write_coils(invalid_address,[0]*NUM_VAR)
-code1 = request1.exception_code
-print("Parâmetro inválido para escrita solicitado (endereço): ", invalid_address)
-print("Código de exceção: ", code1)
-print("Código de exceção decodificado: ", ModbusExceptions.decode(code1))
-
-request2 = client.write_coils(SLAVE_ADDRESS, invalid_value)
-code2 = request2.exception_code
-print("Parâmetro inválido para escrita solicitado (valor): ", invalid_value)
-print("Código de exceção: ", code2)
-print("Código de exceção decodificado: ", ModbusExceptions.decode(code2))
-
-# Solicitação válida de escrita
-valid_request = client.write_coils(SLAVE_ADDRESS,[VALUE]*NUM_VAR)
-print("Parâmetro válido para escrita: ", VALUE)
-print("Endereço válido das solicitações de leitura e escrita: ", SLAVE_ADDRESS)
-print("Parâmetro de quantidade na solicitação válida de escrita: ", NUM_VAR)
-
 # Solicitação de leitura
-read_value = client.read_coils(SLAVE_ADDRESS, NUM_VAR)
-print("Valor lido: " + str(read_value.bits))
+print("Enderços para solicitação de leitura: ", SLAVE_ADDRESSES)
+read_value1 = client.read_input_registers(SLAVE_ADDRESSES[0], unit=0x00)
+print("Valor lido para slave 1: " + str(read_value1.registers))
+read_value2 = client.read_input_registers(SLAVE_ADDRESSES[1], unit=0x01)
+print("Valor lido para slave 2: " + str(read_value2.registers))
+
